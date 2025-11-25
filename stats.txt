@@ -1,0 +1,85 @@
+Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+Formula: zscore ~ block * structure * dependency_length + (1 + block +  
+    dependency_length | workerid) + (1 | lexicalization)
+   Data: data_acc_nofill
+
+REML criterion at convergence: 5765.8
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-7.0516 -0.2795  0.0477  0.4309  5.8046 
+
+Random effects:
+ Groups         Name               Variance  Std.Dev.  Corr       
+ workerid       (Intercept)        1.817e-07 0.0004262            
+                block              2.025e-03 0.0449983 -0.95      
+                dependency_length1 1.506e-03 0.0388020  0.95 -1.00
+ lexicalization (Intercept)        2.530e-03 0.0502946            
+ Residual                          1.907e-01 0.4366506            
+Number of obs: 4736, groups:  workerid, 294; lexicalization, 24
+
+Fixed effects:
+                                      Estimate Std. Error         df t value Pr(>|t|)    
+(Intercept)                         -5.290e-06  1.207e-02  2.302e+01   0.000 0.999654    
+block                                5.070e-02  6.267e-03  3.374e+02   8.089 1.09e-14 ***
+structure1                           4.725e-01  6.355e-03  4.426e+03  74.348  < 2e-16 ***
+dependency_length1                   5.665e-01  6.749e-03  4.554e+02  83.951  < 2e-16 ***
+block:structure1                    -2.327e-02  5.689e-03  4.430e+03  -4.090 4.39e-05 ***
+block:dependency_length1            -3.542e-02  5.688e-03  4.430e+03  -6.227 5.18e-10 ***
+structure1:dependency_length1       -4.369e-01  6.356e-03  4.427e+03 -68.738  < 2e-16 ***
+block:structure1:dependency_length1  2.116e-02  5.685e-03  4.427e+03   3.723 0.000199 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) block  strct1 dpnd_1 blck:1 blc:_1 st1:_1
+block       -0.001                                          
+structure1   0.000 -0.001                                   
+dpndncy_ln1  0.001 -0.141  0.000                            
+blck:strct1  0.000 -0.001  0.001  0.000                     
+blck:dpnd_1  0.000  0.000  0.000  0.000  0.000              
+strctr1:d_1  0.000  0.000 -0.001  0.000 -0.001 -0.001       
+blck:st1:_1  0.000  0.002 -0.001  0.001 -0.002 -0.001  0.000
+optimizer (nloptwrap) convergence code: 0 (OK)
+
+
+
+> summary(lmer_neg)
+Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+Formula: response ~ trial_type * polarity + (1 + trial_type * polarity |      workerid) + (1 + trial_type * polarity | item)
+   Data: neg_nofill
+
+REML criterion at convergence: -2577.3
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-7.7319 -0.0696  0.1225  0.2789  3.9118 
+
+Random effects:
+ Groups   Name                  Variance  Std.Dev. Corr             
+ workerid (Intercept)           1.069e-02 0.103393                  
+          trial_type1           1.307e-03 0.036149 -0.08            
+          polarity1             4.106e-03 0.064080 -0.84  0.07      
+          trial_type1:polarity1 8.873e-04 0.029787 -0.06 -0.98 -0.02
+ item     (Intercept)           5.469e-05 0.007395                  
+          trial_type1           7.223e-05 0.008499  1.00            
+          polarity1             1.377e-04 0.011735 -1.00 -1.00      
+          trial_type1:polarity1 6.525e-06 0.002554 -1.00 -1.00  1.00
+ Residual                       1.219e-02 0.110400                  
+Number of obs: 2368, groups:  workerid, 294; item, 24
+
+Fixed effects:
+                        Estimate Std. Error         df t value Pr(>|t|)    
+(Intercept)            9.054e-01  6.621e-03  2.288e+02 136.752  < 2e-16 ***
+trial_type1            1.623e-05  3.558e-03  3.972e+01   0.005    0.996    
+polarity1              3.724e-02  4.991e-03  8.018e+01   7.462 8.99e-11 ***
+trial_type1:polarity1 -2.100e-03  2.913e-03  1.723e+02  -0.721    0.472    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) trl_t1 plrty1
+trial_type1  0.070              
+polarity1   -0.684 -0.205       
+trl_typ1:p1 -0.073 -0.440  0.080
+optimizer (nloptwrap) convergence code: 0 (OK)

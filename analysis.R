@@ -31,8 +31,9 @@ ci.high <- function(x,na.rm=T) {
 `%notin%` <- Negate(`%in%`)
 
 
-raw_data_path <- "data.csv"
+raw_data_path <- "cdata.csv"
 data<-read.csv(raw_data_path)
+
 
 data_acc <- data%>%
   filter(trial_type == "acceptability")
@@ -77,8 +78,8 @@ island_raw_plot
 #z-score plot
 island_zscore_plot <- ggplot(data_acc_nofill, aes(x = block, y=zscore, linetype = structure, fill=dependency_length)) +
   geom_point(data=acc_summary,alpha=.9) +
-  xlab("block number") +
-  ylab("average acceptability")+
+  xlab("Block number") +
+  ylab("Average acceptability z-score")+
   geom_smooth(method=lm) +
   scale_fill_manual(values=cbPalette) +
   theme_bw()
@@ -185,24 +186,13 @@ contrasts(data_acc_nofill$structure) <- contr.sum(2)
 contrasts(data_acc_nofill$dependency_length) <- contr.sum(2)
 
 #lmer
-lmer_island_raw <- lmer(response~block*structure*dependency_length+ 
-                             (1+block*structure*dependency_length|workerid)+
-                             (1+block*structure*dependency_length|lexicalization), 
-                           data = data_acc_nofill)
-summary(lmer_island_raw )
 
 lmer_island_z <- lmer(zscore~block*structure*dependency_length+ 
-                          (1|workerid)+
+                          (1+block+dependency_length|workerid)+
                           (1|lexicalization), 
                         data = data_acc_nofill)
 summary(lmer_island_z )
 
-#brms
-brms_island_raw <- brm(response~block*structure*dependency_length+ 
-                          (1|workerid)+
-                          (1|lexicalization), 
-                        data = data_acc_nofill, family = gaussian())
-summary(brms_island_raw)
 
 
 ################
@@ -216,46 +206,7 @@ neg_nofill <- neg_nofill%>%
   mutate(item = (sentence_id - 1000)%/%10 +1)
 lmer_neg <- lmer(response~trial_type*polarity+ 
                           (1+trial_type*polarity|workerid) +
-                   (1|item), 
+                   (1+trial_type*polarity|item), 
                         data = neg_nofill)
 summary(lmer_neg)
 
-
-####################
-#Neg Power Analysis#
-####################
-run_neg_power_mixedpower <- function(steps   = c(40, 60, 80, 100, 120),
-                                        n_sim  = 500,
-                                        alpha  = 0.05,
-                                        SESOI  = FALSE,
-                                        databased = TRUE,
-                                        make_plot = TRUE) {
-  # two-sided alpha => critical t/z value
-  crit <- qnorm(1 - alpha/2)
-  
-  power_res <- mixedpower(
-    model         = lmer_neg,
-    data          = neg_nofill,
-    fixed_effects = c("trial_type", "polarity"),
-    simvar        = "workerid",  
-    steps         = steps,     
-    critical_value = crit,
-    n_sim         = n_sim,
-    SESOI         = SESOI,
-    databased     = databased
-  )
-  
-  if (make_plot) {
-    multiplotPower(power_res)
-  }
-  
-  return(power_res)
-}
-
-power_table <- run_neg_power_mixedpower(
-  steps  = c(200,300),
-  n_sim  = 100,
-  alpha  = 0.05
-)
-
-power_table
