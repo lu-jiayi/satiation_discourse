@@ -67,23 +67,45 @@ cbPalette = c("#d55e00", "#009e74","#e69d00","#cc79a7", "#0071b2")
 
 #raw rating plot
 island_raw_plot <- ggplot(data_acc_nofill, aes(x = block, y=response, linetype = structure, fill=dependency_length)) +
-  geom_point(data=acc_summary,alpha=.9) +
-  xlab("block number") +
-  ylab("average acceptability")+
+  geom_point(data=acc_summary, alpha=.9) +
+  xlab("Block number") +
+  ylab("Average acceptability") +
   geom_smooth(method=lm) +
-  scale_fill_manual(values=cbPalette) +
-  theme_bw()
+  scale_fill_manual(values = cbPalette) +
+  labs(fill = "Dependency Length", linetype = "Structure") +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+  )
+
 island_raw_plot
 
+
 #z-score plot
-island_zscore_plot <- ggplot(data_acc_nofill, aes(x = block, y=zscore, linetype = structure, fill=dependency_length)) +
-  geom_point(data=acc_summary,alpha=.9) +
+island_z_plot <- ggplot(data_acc_nofill, aes(x = block, y=zscore, linetype = structure, fill=dependency_length)) +
+  geom_point(data=acc_summary, alpha=.9) +
   xlab("Block number") +
-  ylab("Average acceptability z-score")+
+  ylab("Average acceptability z-score") +
   geom_smooth(method=lm) +
-  scale_fill_manual(values=cbPalette) +
-  theme_bw()
-island_zscore_plot
+  scale_fill_manual(values = cbPalette) +
+
+  labs(fill = "Dependency Length", linetype = "Structure") +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.spacing = unit(2,"pt")
+  )
+
+island_z_plot
+
 
 #DD score plot
 data_island_dd <- data_acc_nofill %>%
@@ -104,10 +126,14 @@ block_means_dd = data_island_dd %>%
 DD_plot <- ggplot(data_island_dd, aes(x = block, y=DD)) +
   geom_point(data=block_means_dd,alpha=.9) +
   xlab("Block number") +
-  ylab("Average DD score")+
+  ylab("Average DD score (based on acceptability z-score)")+
   geom_smooth(method=lm) +
   scale_fill_manual(values=cbPalette) +
-  theme_bw()
+  theme_bw()+
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14)
+  )
 DD_plot
 
 
