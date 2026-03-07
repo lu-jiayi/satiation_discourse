@@ -137,7 +137,9 @@ DD_plot <- ggplot(block_means_dd, aes(x = block, y = mean_DD)) +
                 width = .15) +
   xlab("Block number") +
   ylab("Average DD score") +
-  theme_bw()
+  theme_bw() + 
+  theme( axis.title = element_text(size = 16),
+         axis.text = element_text(size = 14))
 
 DD_plot
 
@@ -201,8 +203,12 @@ neg_bar_plot <-
   xlab("Task Position") +
   ylab("Mean Negation score") +
   theme(legend.position = "bottom") +
-  ggtitle("Negation Score Plot") +
-  ylim(0, 1)
+  ylim(0, 1) +   
+  theme( axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14),
+        legend.title = element_text(size = 16),
+        legend.text = element_text(size = 14)))
+  
 neg_bar_plot
 
 #####################
