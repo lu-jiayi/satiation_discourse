@@ -33,13 +33,8 @@ ci.high <- function(x,na.rm=T) {
 
 raw_data_path <- "cdata.csv"
 data<-read.csv(raw_data_path)
-
-
-data_acc <- data%>%
-  filter(trial_type == "acceptability")
-
-data_neg <- data%>%
-  filter(trial_type %in% c("negation_pre", "negation_post"))
+data_acc <- read.csv("data_acc.csv")
+data_neg <- read.csv("data_neg.csv")
 ###############
 #Acceptability#
 ###############
@@ -207,7 +202,7 @@ neg_bar_plot <-
   theme( axis.title = element_text(size = 16),
         axis.text = element_text(size = 14),
         legend.title = element_text(size = 16),
-        legend.text = element_text(size = 14)))
+        legend.text = element_text(size = 14))
   
 neg_bar_plot
 
