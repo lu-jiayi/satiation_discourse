@@ -30,11 +30,9 @@ ci.high <- function(x,na.rm=T) {
   quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.975,na.rm=na.rm) - mean(x,na.rm=na.rm)}
 `%notin%` <- Negate(`%in%`)
 
-
-raw_data_path <- "cdata.csv"
-data<-read.csv(raw_data_path)
 data_acc <- read.csv("data_acc.csv")
 data_neg <- read.csv("data_neg.csv")
+
 ###############
 #Acceptability#
 ###############
