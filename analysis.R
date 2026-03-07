@@ -121,19 +121,24 @@ data_island_dd <- data_acc_nofill %>%
   select(-long_nonisl, -long_isl, -short_nonisl, -short_isl) 
 block_means_dd = data_island_dd %>%
   group_by(block) %>%
-  summarize(DD = mean(DD)) %>%
+  summarize(
+    n = n(),
+    mean_DD = mean(DD),
+    sd_DD = sd(DD),
+    se = sd_DD / sqrt(n),
+    ci = qt(.975, df = n - 1) * se
+  ) %>%
   ungroup()
-DD_plot <- ggplot(data_island_dd, aes(x = block, y=DD)) +
-  geom_point(data=block_means_dd,alpha=.9) +
+DD_plot <- ggplot(block_means_dd, aes(x = block, y = mean_DD)) +
+  geom_point(size = 2) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_DD - ci,
+                    ymax = mean_DD + ci),
+                width = .15) +
   xlab("Block number") +
-  ylab("Average DD score (based on acceptability z-score)")+
-  geom_smooth(method=lm) +
-  scale_fill_manual(values=cbPalette) +
-  theme_bw()+
-  theme(
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 14)
-  )
+  ylab("Average DD score") +
+  theme_bw()
+
 DD_plot
 
 
