@@ -1,6 +1,8 @@
 this.dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(this.dir)
 
+source("helper.R")
+
 library(plyr)
 library(dplyr)
 library(reshape)
@@ -18,52 +20,81 @@ library(ordinal)
 library(devtools)
 
 if (!require("devtools")) {
-  install.packages("devtools", dependencies = TRUE)}
-devtools::install_github("DejanDraschkow/mixedpower") 
+  install.packages("devtools", dependencies = TRUE)
+}
+devtools::install_github("DejanDraschkow/mixedpower")
 library(mixedpower)
 
-
-theta <- function(x,xdata,na.rm=T) {mean(xdata[x],na.rm=na.rm)}
-ci.low <- function(x,na.rm=T) {
-  mean(x,na.rm=na.rm) - quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.025,na.rm=na.rm)}
-ci.high <- function(x,na.rm=T) {
-  quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.975,na.rm=na.rm) - mean(x,na.rm=na.rm)}
-`%notin%` <- Negate(`%in%`)
-
+#####################
+#Data Pre-processing#
+#####################
+data <- read.csv("ncdata.csv")
+exclude_wrong_attempt <- data %>%
+  group_by(workerid) %>%
+  summarise(
+    exclude_wrong = any(`wrong_attempts` > 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(exclude_wrong) %>%
+  pull(workerid)
+filler_data <- data %>%
+  filter(item_type %in% c("filler_good", "filler_bad"))
+filler_summary <- filler_data %>%
+  group_by(workerid, item_type) %>%
+  summarise(
+    n = sum(!is.na(response)),
+    mean_response = mean(response, na.rm = TRUE),
+    sd_response = sd(response, na.rm = TRUE),
+    se = sd_response / sqrt(n),
+    ci_lower = mean_response - qt(0.975, df = n - 1) * se,
+    ci_upper = mean_response + qt(0.975, df = n - 1) * se,
+    .groups = "drop"
+  )
 data_acc <- read.csv("data_acc.csv")
-data_neg <- read.csv("data_neg.csv")
+filler_wide <- filler_summary %>%
+  select(workerid, item_type, ci_lower, ci_upper) %>%
+  tidyr::pivot_wider(
+    names_from = item_type,
+    values_from = c(ci_lower, ci_upper)
+  )
+exclude_ci_overlap <- filler_wide %>%
+  mutate(
+    exclude_overlap = !(
+      ci_upper_filler_good < ci_lower_filler_bad |
+        ci_upper_filler_bad < ci_lower_filler_good
+    )
+  ) %>%
+  filter(exclude_overlap) %>%
+  pull(workerid)
+excluded_workerids <- union(exclude_wrong_attempt, exclude_ci_overlap)
 
 ###############
 #Acceptability#
 ###############
-
 data_acc_nofill <- data_acc %>%
+  filter(!workerid %in% excluded_workerids)%>%
   filter(structure %in% c("island", "nonisland")) %>%
-  mutate(block = (order-25)%/% 12 + 1) %>%
-  group_by(workerid)%>%
+  mutate(block = (order - 25) %/% 12 + 1) %>%
+  group_by(workerid) %>%
   mutate(zscore = (response - mean(response)) / sd(response)) %>%
   ungroup()
 data_acc_nofill$structure <- as.factor(data_acc_nofill$structure)
 data_acc_nofill$structure <- factor(data_acc_nofill$structure, levels = c("nonisland", "island"))
 data_acc_nofill$dependency_length <- as.factor(data_acc_nofill$dependency_length)
 data_acc_nofill$dependency_length <- factor(data_acc_nofill$dependency_length, levels = c("short", "long"))
-
-acc_summary <- data_acc_nofill%>%
+acc_summary <- data_acc_nofill %>%
   group_by(block, dependency_length, structure) %>%
-  summarise(response = mean(response), zscore = mean(zscore))%>%
-  ungroup()
+  summarise(response = mean(response), zscore = mean(zscore), .groups = "drop")
 
-
-cbPalette = c("#d55e00", "#009e74","#e69d00","#cc79a7", "#0071b2")
-
-
-
-#raw rating plot
-island_raw_plot <- ggplot(data_acc_nofill, aes(x = block, y=response, linetype = structure, fill=dependency_length)) +
-  geom_point(data=acc_summary, alpha=.9) +
+# raw rating plot
+island_raw_plot <- ggplot(
+  data_acc_nofill,
+  aes(x = block, y = response, linetype = structure, fill = dependency_length)
+) +
+  geom_point(data = acc_summary, alpha = .9) +
   xlab("Block number") +
   ylab("Average acceptability") +
-  geom_smooth(method=lm) +
+  geom_smooth(method = lm) +
   scale_fill_manual(values = cbPalette) +
   labs(fill = "Dependency Length", linetype = "Structure") +
   theme_bw() +
@@ -76,15 +107,16 @@ island_raw_plot <- ggplot(data_acc_nofill, aes(x = block, y=response, linetype =
 
 island_raw_plot
 
-
-#z-score plot
-island_z_plot <- ggplot(data_acc_nofill, aes(x = block, y=zscore, linetype = structure, fill=dependency_length)) +
-  geom_point(data=acc_summary, alpha=.9) +
+# z-score plot
+island_z_plot <- ggplot(
+  data_acc_nofill,
+  aes(x = block, y = zscore, linetype = structure, fill = dependency_length)
+) +
+  geom_point(data = acc_summary, alpha = .9) +
   xlab("Block number") +
   ylab("Average acceptability z-score") +
-  geom_smooth(method=lm) +
+  geom_smooth(method = lm) +
   scale_fill_manual(values = cbPalette) +
-
   labs(fill = "Dependency Length", linetype = "Structure") +
   theme_bw() +
   theme(
@@ -94,13 +126,12 @@ island_z_plot <- ggplot(data_acc_nofill, aes(x = block, y=zscore, linetype = str
     legend.text = element_text(size = 14),
     legend.position = "bottom",
     legend.box = "vertical",
-    legend.spacing = unit(2,"pt")
+    legend.spacing = unit(2, "pt")
   )
 
 island_z_plot
 
-
-#DD score plot
+# DD score plot
 data_island_dd <- data_acc_nofill %>%
   group_by(block, workerid) %>%
   mutate(
@@ -111,31 +142,32 @@ data_island_dd <- data_acc_nofill %>%
     DD = (long_nonisl - long_isl) - (short_nonisl - short_isl)
   ) %>%
   ungroup() %>%
-  select(-long_nonisl, -long_isl, -short_nonisl, -short_isl) 
-block_means_dd = data_island_dd %>%
+  select(-long_nonisl, -long_isl, -short_nonisl, -short_isl)
+
+block_means_dd <- data_island_dd %>%
   group_by(block) %>%
   summarize(
     n = n(),
     mean_DD = mean(DD),
     sd_DD = sd(DD),
     se = sd_DD / sqrt(n),
-    ci = qt(.975, df = n - 1) * se
-  ) %>%
-  ungroup()
+    ci = qt(.975, df = n - 1) * se,
+    .groups = "drop"
+  )
+
 DD_plot <- ggplot(block_means_dd, aes(x = block, y = mean_DD)) +
   geom_point(size = 2) +
   geom_line() +
-  geom_errorbar(aes(ymin = mean_DD - ci,
-                    ymax = mean_DD + ci),
-                width = .15) +
+  geom_errorbar(aes(ymin = mean_DD - ci, ymax = mean_DD + ci), width = .15) +
   xlab("Block number") +
   ylab("Average DD score") +
-  theme_bw() + 
-  theme( axis.title = element_text(size = 16),
-         axis.text = element_text(size = 14))
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14)
+  )
 
 DD_plot
-
 
 ################
 #Negation Tests#
@@ -148,95 +180,117 @@ neg_nofill$trial_type <- as.factor(neg_nofill$trial_type)
 neg_nofill$trial_type <- factor(neg_nofill$trial_type, levels = c("negation_pre", "negation_post"))
 neg_nofill$polarity <- as.factor(neg_nofill$polarity)
 
-
 neg_nofill_summary <- neg_nofill %>%
   group_by(polarity, trial_type) %>%
-  summarise(Mean = mean(response),
-            CILow = ci.low(response), CIHigh = ci.high(response)) %>%
-  ungroup()%>%
-  mutate(YMin=Mean-CILow,YMax=Mean+CIHigh)
+  summarise(
+    Mean = mean(response),
+    CILow = ci.low(response),
+    CIHigh = ci.high(response),
+    .groups = "drop"
+  ) %>%
+  mutate(YMin = Mean - CILow, YMax = Mean + CIHigh)
 
-
-cbPalette = c("#d55e00", "#009e74","#e69d00","#cc79a7", "#0071b2")
-
-
-neg_line_plot <- 
-  ggplot(neg_nofill_summary, aes(x = trial_type, y = Mean, color = polarity, group = polarity)) +
+neg_line_plot <- ggplot(
+  neg_nofill_summary,
+  aes(x = trial_type, y = Mean, color = polarity, group = polarity)
+) +
   geom_line(linewidth = 1) +
   geom_point() +
   geom_errorbar(aes(ymin = YMin, ymax = YMax), width = 0.5, linewidth = 1, show.legend = FALSE) +
-  scale_color_manual(values = cbPalette, name = "Polarity") + 
+  scale_color_manual(values = cbPalette, name = "Polarity") +
   theme_bw() +
   scale_x_discrete(labels = c(
-    "negation_pre"  = "Pre-exposure",
+    "negation_pre" = "Pre-exposure",
     "negation_post" = "Post-exposure"
-  ))+
+  )) +
   xlab("Task Position") +
   ylab("Mean Negation score") +
   theme(legend.position = "bottom") +
   ggtitle("Negation Score Plot") +
-  ylim(0,1)
+  ylim(0, 1)
+
 neg_line_plot
 
-neg_bar_plot <- 
-  ggplot(neg_nofill_summary, 
-         aes(x = trial_type, y = Mean, fill = polarity)) +
+neg_bar_plot <- ggplot(
+  neg_nofill_summary,
+  aes(x = trial_type, y = Mean, fill = polarity)
+) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
-  geom_errorbar(aes(ymin = YMin, ymax = YMax),
-                position = position_dodge(width = 0.8),
-                width = 0.3,
-                linewidth = 1,
-                show.legend = FALSE) +
-  scale_fill_manual(values = cbPalette, name = "Polarity") + 
+  geom_errorbar(
+    aes(ymin = YMin, ymax = YMax),
+    position = position_dodge(width = 0.8),
+    width = 0.3,
+    linewidth = 1,
+    show.legend = FALSE
+  ) +
+  scale_fill_manual(values = cbPalette, name = "Polarity") +
   theme_bw() +
   scale_x_discrete(labels = c(
-    "negation_pre"  = "Pre-exposure",
+    "negation_pre" = "Pre-exposure",
     "negation_post" = "Post-exposure"
-  ))+
+  )) +
   xlab("Task Position") +
   ylab("Mean Negation score") +
   theme(legend.position = "bottom") +
-  ylim(0, 1) +   
-  theme( axis.title = element_text(size = 16),
-        axis.text = element_text(size = 14),
-        legend.title = element_text(size = 16),
-        legend.text = element_text(size = 14))
-  
+  ylim(0, 1) +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+  )
+
 neg_bar_plot
 
 #####################
 #Acceptability Stats#
 #####################
 
-#centering and scaling predictors
 data_acc_nofill$block <- scale(data_acc_nofill$block, center = TRUE, scale = FALSE)
 data_acc_nofill$dependency_length <- relevel(data_acc_nofill$dependency_length, ref = "short")
 data_acc_nofill$structure <- relevel(data_acc_nofill$structure, ref = "nonisland")
 contrasts(data_acc_nofill$structure) <- contr.sum(2)
 contrasts(data_acc_nofill$dependency_length) <- contr.sum(2)
 
-#lmer
+lmer_island_z <- lmer(
+  zscore ~ block * structure * dependency_length +
+    (1| workerid) +
+    (1| lexicalization),
+  data = data_acc_nofill
+)
+summary(lmer_island_z)
+brm_island_z <- brm(
+  zscore ~ block * structure * dependency_length +
+    (1 | workerid) +
+    (1 | lexicalization),
+  data = data_acc_nofill,
+  family = gaussian(),
+  chains = 4,
+  cores = 4,
+  iter = 4000,
+  warmup = 1000
+)
 
-lmer_island_z <- lmer(zscore~block*structure*dependency_length+ 
-                          (1+block+dependency_length|workerid)+
-                          (1|lexicalization), 
-                        data = data_acc_nofill)
-summary(lmer_island_z )
-
-
+summary(brm_island_z)
 
 ################
 #Negation Stats#
 ################
+data_neg <- read.csv("data_neg.csv")
 neg_nofill$trial_type <- relevel(neg_nofill$trial_type, ref = "negation_pre")
 neg_nofill$polarity <- relevel(neg_nofill$polarity, ref = "base")
 contrasts(neg_nofill$trial_type) <- contr.sum(2)
 contrasts(neg_nofill$polarity) <- contr.sum(2)
-neg_nofill <- neg_nofill%>%
-  mutate(item = (sentence_id - 1000)%/%10 +1)
-lmer_neg <- lmer(response~trial_type*polarity+ 
-                          (1+trial_type*polarity|workerid) +
-                   (1+trial_type*polarity|item), 
-                        data = neg_nofill)
+
+neg_nofill <- neg_nofill %>%
+  mutate(item = (sentence_id - 1000) %/% 10 + 1)
+
+lmer_neg <- lmer(
+  response ~ trial_type * polarity +
+    (1 + trial_type * polarity | workerid) +
+    (1 + trial_type * polarity | item),
+  data = neg_nofill
+)
+
 summary(lmer_neg)
 
