@@ -3,9 +3,9 @@ setwd(this.dir)
 
 source("helper.R")
 
-library(plyr)
+
 library(dplyr)
-library(reshape)
+
 library(ggplot2)
 library(gtable)
 library(lme4)
@@ -30,13 +30,13 @@ library(mixedpower)
 #####################
 data <- read.csv("ncdata.csv")
 exclude_wrong_attempt <- data %>%
-  group_by(workerid) %>%
-  summarise(
-    exclude_wrong = any(`wrong_attempts` > 1, na.rm = TRUE),
+  dplyr::group_by(workerid) %>%
+  dplyr::summarise(
+    exclude_wrong = any(wrong_attempts > 1, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  filter(exclude_wrong) %>%
-  pull(workerid)
+  dplyr::filter(exclude_wrong) %>%
+  dplyr::pull(workerid)
 filler_data <- data %>%
   filter(item_type %in% c("filler_good", "filler_bad"))
 filler_summary <- filler_data %>%
@@ -172,7 +172,7 @@ DD_plot
 ################
 #Negation Tests#
 ################
-
+data_neg<-read.csv("data_neg.csv")
 neg_nofill <- data_neg %>%
   filter(sentence_id < 2000)
 
@@ -261,8 +261,8 @@ lmer_island_z <- lmer(
 summary(lmer_island_z)
 brm_island_z <- brm(
   zscore ~ block * structure * dependency_length +
-    (1 | workerid) +
-    (1 | lexicalization),
+    (1 + block * structure * dependency_length| workerid) +
+    (1 + block * structure * dependency_length | lexicalization),
   data = data_acc_nofill,
   family = gaussian(),
   chains = 4,
