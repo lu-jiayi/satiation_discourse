@@ -50,7 +50,6 @@ filler_summary <- filler_data %>%
     ci_upper = mean_response + qt(0.975, df = n - 1) * se,
     .groups = "drop"
   )
-data_acc <- read.csv("data_acc.csv")
 filler_wide <- filler_summary %>%
   select(workerid, item_type, ci_lower, ci_upper) %>%
   tidyr::pivot_wider(
@@ -71,8 +70,9 @@ excluded_workerids <- union(exclude_wrong_attempt, exclude_ci_overlap)
 ###############
 #Acceptability#
 ###############
+data_acc <- read.csv("data_acc.csv")
 data_acc_nofill <- data_acc %>%
-  filter(!workerid %in% excluded_workerids)%>%
+#  filter(!workerid %in% excluded_workerids)%>%
   filter(structure %in% c("island", "nonisland")) %>%
   mutate(block = (order - 25) %/% 12 + 1) %>%
   group_by(workerid) %>%
@@ -102,7 +102,10 @@ island_raw_plot <- ggplot(
     axis.title = element_text(size = 16),
     axis.text = element_text(size = 14),
     legend.title = element_text(size = 16),
-    legend.text = element_text(size = 14)
+    legend.text = element_text(size = 14),
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.spacing = unit(2, "pt")
   )
 
 island_raw_plot
@@ -135,10 +138,10 @@ island_z_plot
 data_island_dd <- data_acc_nofill %>%
   group_by(block, workerid) %>%
   mutate(
-    long_nonisl = mean(zscore[structure == "nonisland" & dependency_length == "long"]),
-    long_isl = mean(zscore[structure == "island" & dependency_length == "long"]),
-    short_nonisl = mean(zscore[structure == "nonisland" & dependency_length == "short"]),
-    short_isl = mean(zscore[structure == "island" & dependency_length == "short"]),
+    long_nonisl = mean(response[structure == "nonisland" & dependency_length == "long"]),
+    long_isl = mean(response[structure == "island" & dependency_length == "long"]),
+    short_nonisl = mean(response[structure == "nonisland" & dependency_length == "short"]),
+    short_isl = mean(response[structure == "island" & dependency_length == "short"]),
     DD = (long_nonisl - long_isl) - (short_nonisl - short_isl)
   ) %>%
   ungroup() %>%
@@ -252,13 +255,13 @@ data_acc_nofill$structure <- relevel(data_acc_nofill$structure, ref = "nonisland
 contrasts(data_acc_nofill$structure) <- contr.sum(2)
 contrasts(data_acc_nofill$dependency_length) <- contr.sum(2)
 
-lmer_island_z <- lmer(
+lmer_island <- lmer(
   zscore ~ block * structure * dependency_length +
     (1| workerid) +
     (1| lexicalization),
   data = data_acc_nofill
 )
-summary(lmer_island_z)
+summary(lmer_island)
 brm_island_z <- brm(
   zscore ~ block * structure * dependency_length +
     (1 + block * structure * dependency_length| workerid) +
