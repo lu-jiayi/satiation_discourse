@@ -92,15 +92,13 @@ island_plot <- ggplot(
     axis.title = element_text(size = 16),
     axis.text = element_text(size = 14),
     legend.title = element_text(size = 16),
-<<<<<<< HEAD
-=======
     legend.text = element_text(size = 14),
     legend.position = "bottom",
     legend.box = "vertical",
     legend.spacing = unit(2, "pt")
   )
 
-island_raw_plot
+island_plot
 
 # z-score plot
 island_z_plot <- ggplot(
@@ -118,14 +116,13 @@ island_z_plot <- ggplot(
     axis.title = element_text(size = 16),
     axis.text = element_text(size = 14),
     legend.title = element_text(size = 16),
->>>>>>> f881af37121649ba63d97eae744bac5e4892a87a
     legend.text = element_text(size = 14),
     legend.position = "bottom",
     legend.box = "vertical",
     legend.spacing = unit(2, "pt")
   )
 
-island_plot
+island_z_plot
 
 # DD score plot
 data_island_dd <- data_acc_nofill %>%
@@ -227,15 +224,9 @@ contrasts(data_acc_nofill$structure) <- contr.sum(2)
 contrasts(data_acc_nofill$dependency_length) <- contr.sum(2)
 
 lmer_island <- lmer(
-<<<<<<< HEAD
   response ~ block * structure * dependency_length +
     (1+block * structure * dependency_length| workerid) +
     (1+block * structure * dependency_length| lexicalization),
-=======
-  zscore ~ block * structure * dependency_length +
-    (1| workerid) +
-    (1| lexicalization),
->>>>>>> f881af37121649ba63d97eae744bac5e4892a87a
   data = data_acc_nofill
 )
 summary(lmer_island)
@@ -257,6 +248,8 @@ summary(brm_island_z)
 #Negation Stats#
 ################
 data_neg <- read.csv("data_neg.csv")
+data_neg <- data_neg %>%
+  filter(workerid %notin% excluded_workerids)
 neg_nofill$trial_type <- relevel(neg_nofill$trial_type, ref = "negation_pre")
 neg_nofill$polarity <- relevel(neg_nofill$polarity, ref = "base")
 contrasts(neg_nofill$trial_type) <- contr.sum(2)
