@@ -92,6 +92,33 @@ island_plot <- ggplot(
     axis.title = element_text(size = 16),
     axis.text = element_text(size = 14),
     legend.title = element_text(size = 16),
+<<<<<<< HEAD
+=======
+    legend.text = element_text(size = 14),
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.spacing = unit(2, "pt")
+  )
+
+island_raw_plot
+
+# z-score plot
+island_z_plot <- ggplot(
+  data_acc_nofill,
+  aes(x = block, y = zscore, linetype = structure, fill = dependency_length)
+) +
+  geom_point(data = acc_summary, alpha = .9) +
+  xlab("Block number") +
+  ylab("Average acceptability z-score") +
+  geom_smooth(method = lm) +
+  scale_fill_manual(values = cbPalette) +
+  labs(fill = "Dependency Length", linetype = "Structure") +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+>>>>>>> f881af37121649ba63d97eae744bac5e4892a87a
     legend.text = element_text(size = 14),
     legend.position = "bottom",
     legend.box = "vertical",
@@ -200,9 +227,15 @@ contrasts(data_acc_nofill$structure) <- contr.sum(2)
 contrasts(data_acc_nofill$dependency_length) <- contr.sum(2)
 
 lmer_island <- lmer(
+<<<<<<< HEAD
   response ~ block * structure * dependency_length +
     (1+block * structure * dependency_length| workerid) +
     (1+block * structure * dependency_length| lexicalization),
+=======
+  zscore ~ block * structure * dependency_length +
+    (1| workerid) +
+    (1| lexicalization),
+>>>>>>> f881af37121649ba63d97eae744bac5e4892a87a
   data = data_acc_nofill
 )
 summary(lmer_island)
