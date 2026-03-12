@@ -1,11 +1,7 @@
 this.dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(this.dir)
-
 source("helper.R")
-
-
 library(dplyr)
-
 library(ggplot2)
 library(gtable)
 library(lme4)
@@ -18,17 +14,10 @@ library(brms)
 library(BayesFactor)
 library(ordinal)
 library(devtools)
-
-if (!require("devtools")) {
-  install.packages("devtools", dependencies = TRUE)
-}
-devtools::install_github("DejanDraschkow/mixedpower")
-library(mixedpower)
-
 #####################
 #Data Pre-processing#
 #####################
-data <- read.csv("ncdata.csv")
+data <- read.csv("cdata.csv")
 exclude_wrong_attempt <- data %>%
   dplyr::group_by(workerid) %>%
   dplyr::summarise(
@@ -50,7 +39,7 @@ filler_summary <- filler_data %>%
     ci_upper = mean_response + qt(0.975, df = n - 1) * se,
     .groups = "drop"
   )
-data_acc <- read.csv("data_acc.csv")
+
 filler_wide <- filler_summary %>%
   select(workerid, item_type, ci_lower, ci_upper) %>%
   tidyr::pivot_wider(
@@ -71,6 +60,7 @@ excluded_workerids <- union(exclude_wrong_attempt, exclude_ci_overlap)
 ###############
 #Acceptability#
 ###############
+data_acc <- read.csv("data_acc.csv")
 data_acc_nofill <- data_acc %>%
   filter(!workerid %in% excluded_workerids)%>%
   filter(structure %in% c("island", "nonisland")) %>%
@@ -86,8 +76,8 @@ acc_summary <- data_acc_nofill %>%
   group_by(block, dependency_length, structure) %>%
   summarise(response = mean(response), zscore = mean(zscore), .groups = "drop")
 
-# raw rating plot
-island_raw_plot <- ggplot(
+#satiation plot
+island_plot <- ggplot(
   data_acc_nofill,
   aes(x = block, y = response, linetype = structure, fill = dependency_length)
 ) +
@@ -102,63 +92,42 @@ island_raw_plot <- ggplot(
     axis.title = element_text(size = 16),
     axis.text = element_text(size = 14),
     legend.title = element_text(size = 16),
-    legend.text = element_text(size = 14)
-  )
-
-island_raw_plot
-
-# z-score plot
-island_z_plot <- ggplot(
-  data_acc_nofill,
-  aes(x = block, y = zscore, linetype = structure, fill = dependency_length)
-) +
-  geom_point(data = acc_summary, alpha = .9) +
-  xlab("Block number") +
-  ylab("Average acceptability z-score") +
-  geom_smooth(method = lm) +
-  scale_fill_manual(values = cbPalette) +
-  labs(fill = "Dependency Length", linetype = "Structure") +
-  theme_bw() +
-  theme(
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 14),
-    legend.title = element_text(size = 16),
     legend.text = element_text(size = 14),
     legend.position = "bottom",
     legend.box = "vertical",
     legend.spacing = unit(2, "pt")
   )
 
-island_z_plot
+island_plot
 
 # DD score plot
 data_island_dd <- data_acc_nofill %>%
   group_by(block, workerid) %>%
   mutate(
-    long_nonisl = mean(zscore[structure == "nonisland" & dependency_length == "long"]),
-    long_isl = mean(zscore[structure == "island" & dependency_length == "long"]),
-    short_nonisl = mean(zscore[structure == "nonisland" & dependency_length == "short"]),
-    short_isl = mean(zscore[structure == "island" & dependency_length == "short"]),
+    long_nonisl = mean(response[structure == "nonisland" & dependency_length == "long"]),
+    long_isl = mean(response[structure == "island" & dependency_length == "long"]),
+    short_nonisl = mean(response[structure == "nonisland" & dependency_length == "short"]),
+    short_isl = mean(response[structure == "island" & dependency_length == "short"]),
     DD = (long_nonisl - long_isl) - (short_nonisl - short_isl)
   ) %>%
   ungroup() %>%
   select(-long_nonisl, -long_isl, -short_nonisl, -short_isl)
-
 block_means_dd <- data_island_dd %>%
   group_by(block) %>%
   summarize(
     n = n(),
     mean_DD = mean(DD),
-    sd_DD = sd(DD),
-    se = sd_DD / sqrt(n),
-    ci = qt(.975, df = n - 1) * se,
+    ci_low = ci.low(DD),
+    ci_high = ci.high(DD),
     .groups = "drop"
   )
-
 DD_plot <- ggplot(block_means_dd, aes(x = block, y = mean_DD)) +
   geom_point(size = 2) +
   geom_line() +
-  geom_errorbar(aes(ymin = mean_DD - ci, ymax = mean_DD + ci), width = .15) +
+  geom_errorbar(
+    aes(ymin = mean_DD - ci_low, ymax = mean_DD + ci_high),
+    width = .15
+  ) +
   xlab("Block number") +
   ylab("Average DD score") +
   theme_bw() +
@@ -175,7 +144,6 @@ DD_plot
 data_neg<-read.csv("data_neg.csv")
 neg_nofill <- data_neg %>%
   filter(sentence_id < 2000)
-
 neg_nofill$trial_type <- as.factor(neg_nofill$trial_type)
 neg_nofill$trial_type <- factor(neg_nofill$trial_type, levels = c("negation_pre", "negation_post"))
 neg_nofill$polarity <- as.factor(neg_nofill$polarity)
@@ -189,27 +157,6 @@ neg_nofill_summary <- neg_nofill %>%
     .groups = "drop"
   ) %>%
   mutate(YMin = Mean - CILow, YMax = Mean + CIHigh)
-
-neg_line_plot <- ggplot(
-  neg_nofill_summary,
-  aes(x = trial_type, y = Mean, color = polarity, group = polarity)
-) +
-  geom_line(linewidth = 1) +
-  geom_point() +
-  geom_errorbar(aes(ymin = YMin, ymax = YMax), width = 0.5, linewidth = 1, show.legend = FALSE) +
-  scale_color_manual(values = cbPalette, name = "Polarity") +
-  theme_bw() +
-  scale_x_discrete(labels = c(
-    "negation_pre" = "Pre-exposure",
-    "negation_post" = "Post-exposure"
-  )) +
-  xlab("Task Position") +
-  ylab("Mean Negation score") +
-  theme(legend.position = "bottom") +
-  ggtitle("Negation Score Plot") +
-  ylim(0, 1)
-
-neg_line_plot
 
 neg_bar_plot <- ggplot(
   neg_nofill_summary,
@@ -252,13 +199,13 @@ data_acc_nofill$structure <- relevel(data_acc_nofill$structure, ref = "nonisland
 contrasts(data_acc_nofill$structure) <- contr.sum(2)
 contrasts(data_acc_nofill$dependency_length) <- contr.sum(2)
 
-lmer_island_z <- lmer(
-  zscore ~ block * structure * dependency_length +
-    (1| workerid) +
-    (1| lexicalization),
+lmer_island <- lmer(
+  response ~ block * structure * dependency_length +
+    (1+block * structure * dependency_length| workerid) +
+    (1+block * structure * dependency_length| lexicalization),
   data = data_acc_nofill
 )
-summary(lmer_island_z)
+summary(lmer_island)
 brm_island_z <- brm(
   zscore ~ block * structure * dependency_length +
     (1 + block * structure * dependency_length| workerid) +
