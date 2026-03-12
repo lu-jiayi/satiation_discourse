@@ -19,17 +19,17 @@ library(devtools)
 #####################
 data <- read.csv("cdata.csv")
 exclude_wrong_attempt <- data %>%
-  dplyr::group_by(workerid) %>%
+  dplyr::group_by(id) %>%
   dplyr::summarise(
-    exclude_wrong = any(wrong_attempts > 1, na.rm = TRUE),
+    exclude_wrong = any(wrong_practice > 1, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   dplyr::filter(exclude_wrong) %>%
-  dplyr::pull(workerid)
+  dplyr::pull(id)
 filler_data <- data %>%
-  filter(item_type %in% c("filler_good", "filler_bad"))
+  filter(type %in% c("filler_good", "filler_bad"))
 filler_summary <- filler_data %>%
-  group_by(workerid, item_type) %>%
+  group_by(id, type) %>%
   summarise(
     n = sum(!is.na(response)),
     mean_response = mean(response, na.rm = TRUE),
@@ -41,9 +41,9 @@ filler_summary <- filler_data %>%
   )
 
 filler_wide <- filler_summary %>%
-  select(workerid, item_type, ci_lower, ci_upper) %>%
+  select(id, type, ci_lower, ci_upper) %>%
   tidyr::pivot_wider(
-    names_from = item_type,
+    names_from = type,
     values_from = c(ci_lower, ci_upper)
   )
 exclude_ci_overlap <- filler_wide %>%
@@ -54,7 +54,7 @@ exclude_ci_overlap <- filler_wide %>%
     )
   ) %>%
   filter(exclude_overlap) %>%
-  pull(workerid)
+  pull(id)
 excluded_workerids <- union(exclude_wrong_attempt, exclude_ci_overlap)
 
 ###############
